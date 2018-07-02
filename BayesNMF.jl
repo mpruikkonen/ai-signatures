@@ -1,5 +1,3 @@
-#!/home/mipr/julia/julia-d55cadc350/bin/julia
-
 # Equivalent to BayesNMF.L1W.L2H in http://dx.doi.org/10.1101/322859
 function BayesNMF(V0, n_iter, a0, b0, tol, K)
     eps = 1e-50
@@ -17,28 +15,31 @@ function BayesNMF(V0, n_iter, a0, b0, tol, K)
     beta = squeeze(C ./ (sum(W, 1)' + 0.5*sum(H .* H, 2) .+ b0), 2)
 
     iter = 2
-    like = evid = error = 0
     while del >= tol && iter < n_iter
         B = diagm(beta)
-        H = H .* (W' * (V ./ V_ap) ./ (W' * I_NM + B * H .+ eps))
-        V_ap = W * H .+ eps
-        W = W .* ((V ./ V_ap) * H' ./ (I_NM * H' + I_NK * B .+ eps))
+        H .= H .* (W' * (V ./ V_ap) ./ (W' * I_NM .+ B * H .+ eps))
+        V_ap .= W * H .+ eps
+        W .= W .* ((V ./ V_ap) * H' ./ (I_NM * H' .+ I_NK * B .+ eps))
         prev_beta = beta
         beta = squeeze(C ./ (sum(W, 1)' + 0.5*sum(H .* H, 2) .+ b0), 2)
-        V_ap = W * H .+ eps
-        V_err = V - V_ap
-        error = sum(V_err .* V_err)
+        V_ap .= W * H .+ eps
         if mod(iter, 100) == 0
-            del = maximum(abs.(beta-prev_beta) ./ prev_beta)
-            like = sum(V .* log.((V .+ eps) ./ (V_ap .+ eps)) + V_ap - V)
-            evid = like + sum((sum(W, 1)' + 0.5*sum(H .* H, 2) .+ b0) .* beta - C .* log.(beta))
-            println("$iter $evid $like $error $del")
+            del = maximum(abs.(beta .- prev_beta) ./ prev_beta)
+#            V_err = V - V_ap
+#            error = sum(V_err .* V_err)
+#            like = sum(V .* log.((V .+ eps) ./ (V_ap .+ eps)) .+ V_ap .- V)
+#            evid = like + sum((sum(W, 1)' .+ 0.5*sum(H .* H, 2) .+ b0) .* beta .- C .* log.(beta))
+#            println("$iter $evid $like $error $del")
         end
-        iter = iter + 1
+        iter += 1
     end
+    V_err = V - V_ap
+    error = sum(V_err .* V_err)
+    like = sum(V .* log.((V .+ eps) ./ (V_ap .+ eps)) .+ V_ap .- V)
+    evid = like + sum((sum(W, 1)' .+ 0.5*sum(H .* H, 2) .+ b0) .* beta .- C .* log.(beta))
     lambda = 1 ./ beta
-    return W, H, like, evid, lambda, error
+    return (W, H, like, evid, lambda, error)
 end
 
-include("demo_input_matrix.jl")
-(W, H, like, evid, lambda, error) = BayesNMF(demo_input_matrix, 200000, 10, 5, 1e-07, 25)
+#include("demo_input_matrix.jl")
+#(W, H, like, evid, lambda, error) = BayesNMF(demo_input_matrix, 200000, 10, 5, 1e-07, 25)
