@@ -19,6 +19,8 @@ function distance_from_centromere(chr, startpos, endpos, eventtype)
     return abs(cpos - spos) / arm_length
 end
 
-# TODO: add other feature extraction operations to the below table
+function segment_size(chr, startpos, endpos, eventtype)
+    return (endpos - startpos) / 10000000
+end
 
-const feature_ops = [distance_from_centromere]
+const feature_ops = [segment_size, distance_from_centromere]

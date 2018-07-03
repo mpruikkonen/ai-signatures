@@ -18,7 +18,8 @@ function generate_input_matrix_from_bedfile(file)
     for i = 1:size(input,1)
         samplename = input[i, 7]
         if !haskey(sample_feature_distributions, samplename)
-            sample_feature_distributions[samplename] = fill(Vector{Float64}(), feature_opcount)
+#            sample_feature_distributions[samplename] = fill(Vector{Float64}(), feature_opcount)
+            sample_feature_distributions[samplename] = [Vector{Float64}(), Vector{Float64}()]
             samplecount = samplecount + 1
         end
         add_sample_to_feature_distributions!(sample_feature_distributions[samplename], input[i,1], input[i,2], input[i,3], input[i, 4])
@@ -31,7 +32,7 @@ function generate_input_matrix_from_bedfile(file)
     for feature_distributions in values(sample_feature_distributions)
         if size(feature_distributions[1], 1) > 1 # this if discards the samples with one entry
             for j = 1:feature_opcount
-                k = feature_opcount*(j-1)
+                k = distvar_opcount*(j-1)
                 for dv = 1:distvar_opcount
                     M[i, k+dv] = distvar_ops[dv](feature_distributions[j])
                 end
