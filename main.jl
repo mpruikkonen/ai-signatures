@@ -12,14 +12,14 @@ using StatsBase
 include("feature_extraction.jl")
 
 function save_nmf_run_output(idx, ret)
-    p("NMF run $idx finished: like = $(ret[3]), evid = $(ret[4]), error = $(ret[6])")
+    p("NMF run $idx finished: like = $(ret[3]), evid = $(ret[4]), error = $(ret[6]), iter = $(ret[7])")
     # TODO: write W & H to disk?
     return ret
 end
 
 function aisig(datafile; nmf_runs = 1, host = "")
     p("Generating input matrix from data file...")
-    M = generate_input_matrix_from_bedfile(datafile)
+    (M, opnames) = generate_input_matrix_from_bedfile(datafile)
 
     if nmf_runs != 1 || host != ""
         # if we're running in a REPL with existing workers we just add
@@ -48,5 +48,5 @@ function aisig(datafile; nmf_runs = 1, host = "")
         end
     end
     p("Done")
-    return responses
+    return responses, opnames
 end

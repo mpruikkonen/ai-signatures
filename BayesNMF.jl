@@ -25,11 +25,6 @@ function BayesNMF(V0, n_iter, a0, b0, tol, K)
         V_ap .= W * H .+ eps
         if mod(iter, 100) == 0
             del = maximum(abs.(beta .- prev_beta) ./ prev_beta)
-#            V_err = V - V_ap
-#            error = sum(V_err .* V_err)
-#            like = sum(V .* log.((V .+ eps) ./ (V_ap .+ eps)) .+ V_ap .- V)
-#            evid = like + sum((sum(W, 1)' .+ 0.5*sum(H .* H, 2) .+ b0) .* beta .- C .* log.(beta))
-#            println("$iter $evid $like $error $del")
         end
         iter += 1
     end
@@ -38,7 +33,7 @@ function BayesNMF(V0, n_iter, a0, b0, tol, K)
     like = sum(V .* log.((V .+ eps) ./ (V_ap .+ eps)) .+ V_ap .- V)
     evid = like + sum((sum(W, 1)' .+ 0.5*sum(H .* H, 2) .+ b0) .* beta .- C .* log.(beta))
     lambda = 1 ./ beta
-    return (W, H, like, evid, lambda, error)
+    return (W, H, like, evid, lambda, error, iter)
 end
 
 #include("demo_input_matrix.jl")

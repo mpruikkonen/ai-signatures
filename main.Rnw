@@ -1,0 +1,96 @@
+\documentclass{article}
+
+\begin{document}
+
+<<setup, echo=FALSE, message=FALSE>>==
+library(JuliaCall)
+julia_setup(JULIA_HOME = "/home/mipr/julia/julia-d55cadc350/bin")
+library(NMF)
+library(ggplot2)
+@
+
+We start by extracting the features and generating the signatures in Julia
+
+% remember to clear the cache after editing the Julia code
+<<aisig, engine='julia', cache=TRUE>>==
+include("main.jl")
+BayesNMF_results, feature_names = aisig("input.bed")
+@
+
+(code available at https://github.com/mpruikkonen/ai-signatures for now)
+\newline
+
+and then plot them in R
+
+<<get_matrices, cache=TRUE, dependson='aisig'>>==
+W <- julia_eval("BayesNMF_results[1][1]")
+H <- julia_eval("BayesNMF_results[1][2]")
+fnames <- julia_eval("feature_names")
+@
+
+\newpage
+
+<<plot_W>>==
+NMF::aheatmap(W,fontsize = 7,Rowv=FALSE,Colv=FALSE,legend = T,main="Sample x Signature")
+@
+
+\newpage
+
+<<plot_H>>==
+NMF::aheatmap(H,fontsize = 7,Rowv=FALSE,Colv=FALSE,legend = T,main="Signature x Variable")
+@
+
+\newpage
+
+<<sig_weights, echo=FALSE, dev='tikz', fig.width=3, fig.height=3>>==
+sig_feat_mat <- H[rowSums(H[,-1]) != 0,]
+nsig <- nrow(sig_feat_mat)
+rownames(sig_feat_mat) <- paste0("s",1:nsig)
+
+cnames <- c()
+clabels <- c()
+for(fname in fnames)
+{
+    cnames <- append(cnames, paste0(fname, 1:5))
+    clabels <- append(clabels, 1:5)
+}
+colnames(sig_feat_mat) <- cnames
+
+temp<-as.data.frame(sig_feat_mat)
+norm_const<-apply(temp,2,sum)
+temp<-data.frame(t(apply(temp,1,function(x){x/norm_const})))
+temp$sig<-rownames(sig_feat_mat)
+
+pdat<-reshape2::melt(temp,id.vars="sig")
+vars<-gsub("^\\d+|\\d+$", "",as.character(pdat$variable))
+pdat<-cbind(pdat,vars)
+colnames(pdat)<-c("sig","Feature","value","Distribution")
+pdat$sig<-factor(pdat$sig,levels=paste0("s",1:nsig))
+
+pdat$Distribution<-plyr::revalue(pdat$Distribution, c(breakpoint_number="Breakpoint number", cn="Copy-number", distance_from_centromere="Distance from centromere", segment_size="Segment size", oscillating_cn="Oscillating CN length"))
+pdat$Distribution<-factor(pdat$Distribution,levels=c("Breakpoint number","Copy-number","Distance from centromere","Oscillating CN length","Segment size"))
+pdat$sig<-plyr::revalue(pdat$sig, c(s1=1,s2=2,s3=3,s4=4))
+
+for(i in 1:(nsig-1))
+{
+    print(
+    ggplot(pdat[pdat$sig==i,],aes(x=interaction(Feature,Distribution),y=value,fill=Distribution,group=Distribution))+
+        geom_col(position="dodge")+
+        scale_x_discrete(labels=clabels)+
+        theme(legend.position="none",axis.text=element_text(size=5),axis.title=element_text(size=5),
+              panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+        ylab("")+coord_cartesian(ylim=c(0,1))+ggtitle(paste0("Signature ",i))+xlab("Component number")
+        )
+}
+@
+<<sig_weights2, echo=FALSE, dev='tikz', fig.width=5, fig.height=3>>==
+ggplot(pdat[pdat$sig==nsig,],aes(x=interaction(Feature,Distribution),y=value,fill=Distribution,group=Distribution))+
+        geom_col(position="dodge")+
+        scale_x_discrete(labels=clabels)+
+        theme(legend.position="right",axis.text=element_text(size=5),axis.title=element_text(size=5),
+              panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              panel.background = element_blank(), axis.line = element_line(colour = "black"))+
+        ylab("")+coord_cartesian(ylim=c(0,1))+ggtitle(paste0("Signature ",nsig))+xlab("Component number")
+@
+\end{document}
